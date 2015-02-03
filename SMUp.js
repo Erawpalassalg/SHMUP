@@ -1,12 +1,13 @@
 window.onload = function(){
 	var canvas = document.getElementById("canvas");
-	var nextPlace = -1; // Prochaine case dans laquelle on placera la balle tirée, -1 signifiant un append
 	var time_before_poping = 0;
-	var score = 1;
+	var score = 0;
+	var money = 500;
 	var timerId;
 	var start = document.getElementById("start");
 	
 	var init = function(){
+		showScore();
 		var ctx = canvas.getContext("2d");
 		var mainship = new Ship(ctx, canvas, mainship_pattern);
 		mainship.build(mainship_pattern.width + 10, canvas.height/2);
@@ -22,7 +23,7 @@ window.onload = function(){
 			// Fait bouger le vaiseau dans la dernière direction pressée
 			mainship.move(direction[0], direction[1]);
 			
-			shooting(mainship);
+			mainship.shooting();
 			moveBullets(mainship);
 			popingEnnemies(ctx, ennemies);
 			movingEnnemies(allies, ennemies);
@@ -65,6 +66,7 @@ window.onload = function(){
 		attack_speed : 110,
 		hp : 1,
 		ennemy : true,
+		money_worth : 20,
 		bullets : {
 			size : 1,
 			speed : 2 // Nombre de cases parcourues par les balles à chaque tour
@@ -130,11 +132,20 @@ window.onload = function(){
 		// Dessiner le vaisseau dans sa nouvelle position
 		this.build(x, y);
 	};
-
+	
 	// Action de tirer du vaisseau, qui renvoie une nouvelle balle -- peut-être qu'il renverra un array de balles
-	Ship.prototype.shoot = function(nextPlace){
+	Ship.prototype.shoot = function(){
 		var bullet = new Bullet(this.ctx, this.bullets.size, this.bullets.speed, this.oX + this.width/3, this.oY + this.height/2);
 		this.fired_bullets.push(bullet);
+	};
+	
+	// Permet au vaisseau de tirer
+	Ship.prototype.shooting = function(){
+		this.time_before_shooting++;
+		if(this.time_before_shooting === this.attack_speed){
+			this.shoot();
+			this.time_before_shooting = 0;
+		}
 	};
 
 	// Constructeur de la classe balle, qui prend les caracs de tir du vaisseau
@@ -155,15 +166,6 @@ window.onload = function(){
 		this.x += this.speed;
 	};
 
-	// Permet au vaisseau de tirer
-	var shooting = function(ship){
-		ship.time_before_shooting++;
-		if(ship.time_before_shooting === ship.attack_speed){
-			ship.shoot(nextPlace);
-			ship.time_before_shooting = 0;
-		}
-	};
-
 	var moveBullets = function(ship){
 		for(var j = 0 ; j < ship.fired_bullets.length ; j++){
 			// Si la balle a une valeur x plus grande que la longueur du canvas, on recycle la case
@@ -182,7 +184,7 @@ window.onload = function(){
 		if(time_before_poping === 500 - score){
 			var ennemy = new Ship(ctx, canvas, basic_ennemy_pattern);
 			e.push(ennemy);
-			ennemy.build(canvas.width, Math.floor((Math.random() * canvas.height-3)+1));
+			ennemy.build(canvas.width, Math.floor((Math.random() * canvas.height-12)+1));
 			time_before_poping = 0;
 		} else {
 			time_before_poping++;
@@ -224,8 +226,9 @@ window.onload = function(){
 	};
 
 	// méthode permettatn d'incrémenter et d'afficher le score
-	var showScore = function(score){
-		document.getElementById("score").innerHTML = score;
+	var showScore = function(){
+		document.getElementById("score").innerHTML = ""+score;
+		document.getElementById("money").innerHTML = ""+money;
 	};
 
 	// Fait perdre des Pv à la cible, si elle est à 0 la fait mourir ( perdre si la cible est le joueur )
@@ -236,6 +239,7 @@ window.onload = function(){
 			if(ships[index].ennemy){
 				depop(ships, index);
 				showScore(score++);
+				money += ships[index].money_worth;
 			} else {
 				lost();
 			}
@@ -253,7 +257,6 @@ window.onload = function(){
 		init();
 		start.disabled = true;
 		score = 0;
-		showScore(score++);
 	};
 	
 };
