@@ -2,7 +2,8 @@ window.onload = function(){
 	var canvas = document.getElementById("canvas");
 	var nextPlace = -1; // Prochaine case dans laquelle on placera la balle tirée, -1 signifiant un append
 	var time_before_poping = 0;
-	var difficulty = 500;
+	var score = 1;
+	var perdu = false;
 	
 	var init = function(){
 		var ctx = canvas.getContext("2d");
@@ -24,6 +25,12 @@ window.onload = function(){
 			movingEnnemies(ennemies);
 			resolvingShots(mainship, ennemies);
 			
+			console.log(perdu);
+
+			if(perdu){
+				clearInterval(timerId);
+			}
+
 		}, 10);
 
 		// En fonction de la touche pressée, on met une direction, qui sera suivie par le vaisseau
@@ -51,7 +58,7 @@ window.onload = function(){
 		ennemy : false,
 		bullets : {
 			size : 1,
-			speed : 1 // Nombre de cases parcourues par les balles à chaque tour
+			speed : 2 // Nombre de cases parcourues par les balles à chaque tour
 		}
 	};
 	
@@ -161,24 +168,21 @@ window.onload = function(){
 	var moveBullets = function(ship){
 		for(var j = 0 ; j < ship.fired_bullets.length ; j++){
 			// Si la balle a une valeur x plus grande que la longueur du canvas, on recycle la case
-			if(ship.fired_bullets[j] != null && ship.fired_bullets[j].x > canvas.width){
-				ship.fired_bullets[j] = null;
-				nextPlace = j;
+			if(ship.fired_bullets[j].x > canvas.width){
+				depop(ship.fired_bullets, j);
 			}
 			//console.log("place " + nextPlace);
 			//console.log("longueur " + ship.fired_bullets.length);
 			// Si la balle existe dans le tableau, la bouger
-			if(ship.fired_bullets[j] != null){
-				ship.fired_bullets[j].move();	
-			}
+			ship.fired_bullets[j].move();
 		}
 	};
 
 	var popingEnnemies = function(ctx, e){
-		if(time_before_poping === difficulty){
+		if(time_before_poping === 500 - score){
 			var ennemy = new Ship(ctx, canvas, basic_ennemy_pattern);
 			e.push(ennemy);
-			ennemy.build(canvas.width, Math.floor((Math.random() * canvas.height-2)+1));
+			ennemy.build(canvas.width, Math.floor((Math.random() * canvas.height-5)+1));
 			time_before_poping = 0;
 		} else {
 			time_before_poping++;
@@ -188,24 +192,33 @@ window.onload = function(){
 	var movingEnnemies = function(e){
 		for(var j = 0 ; j < e.length ; j++){
 			e[j].move(-(e[j].speed), 0);
+			if(e[j].x <= 1){
+				perdu = true;
+			}	
 		}
 	};
 	
-	// Résoud les tirs alliés et ennemis
+	// Résoud les tirs alliés
 	var resolvingShots = function(ms, e){
 		for(var i = 0 ; i < ms.fired_bullets.length ; i++){
 			for(var j = 0 ; j < e.length ; j++){
-				// Faire en sorte que le vaisseau et la balle dépopent lorsqu'ils se touchent
-				// Faire en sorte que les deux array ne se remplissent pas de manière illimitée
-				
-				//J'aurai probablement besoin de 2 fonctions : depopBullet et depopShip
+				if(ms.fired_bullets[i].x >= e[j].oX && ms.fired_bullets[i].y >= e[j].oY && ms.fired_bullets[i].y <= (e[j].oY + e[j].width)){
+					depop(ms.fired_bullets, i);
+					depop(e, j);
+					showScore(score++);
+				}
 			}
 		}
+	};
+
+	var depop = function(array, index){
+		array.splice(index, 1);
+	};
+
+	var showScore = function(score){
+		document.getElementById("score").innerHTML = score;
 	};
 
 	init();
 	
 };
-
-
-
