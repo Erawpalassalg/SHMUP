@@ -3,13 +3,16 @@ window.onload = function(){
 	var nextPlace = -1; // Prochaine case dans laquelle on placera la balle tirée, -1 signifiant un append
 	var time_before_poping = 0;
 	var score = 1;
-	var perdu = false;
+	var timerId;
+	var start = document.getElementById("start");
 	
 	var init = function(){
 		var ctx = canvas.getContext("2d");
 		var mainship = new Ship(ctx, canvas, mainship_pattern);
 		mainship.build(mainship_pattern.width + 10, canvas.height/2);
 		var ennemies = [];
+		var allies = [];
+		allies.push(mainship);
 		var direction = [0, 0];
 
 		// Nouvelle itération et affichage tous les 10 millièmes de sec
@@ -22,15 +25,8 @@ window.onload = function(){
 			shooting(mainship);
 			moveBullets(mainship);
 			popingEnnemies(ctx, ennemies);
-			movingEnnemies(ennemies);
+			movingEnnemies(allies, ennemies);
 			resolvingShots(mainship, ennemies);
-			
-			console.log(perdu);
-
-			if(perdu){
-				clearInterval(timerId);
-			}
-
 		}, 10);
 
 		// En fonction de la touche pressée, on met une direction, qui sera suivie par le vaisseau
@@ -46,7 +42,6 @@ window.onload = function(){
 				direction = [mainship.speed, 0]; //mainship.move(10, 0);
 			}
 		};
-
 	};
 	
 	
@@ -55,6 +50,7 @@ window.onload = function(){
 		height : 25,
 		speed : 0.5,
 		attack_speed : 100,
+		hp : 1,
 		ennemy : false,
 		bullets : {
 			size : 1,
@@ -65,8 +61,9 @@ window.onload = function(){
 	var basic_ennemy_pattern = {
 		width : 20,
 		height : 25,
-		speed : 0.5,
+		speed : 0.5 + score/10,
 		attack_speed : 110,
+		hp : 1,
 		ennemy : true,
 		bullets : {
 			size : 1,
@@ -81,6 +78,7 @@ window.onload = function(){
 		this.height = ship.height;
 		this.speed = ship.speed;
 		this.attack_speed = ship.attack_speed;
+		this.hp = ship.hp;
 		this.ennemy = ship.ennemy;
 		this.time_before_shooting = 0; // incrémenté toutes les centièmes de seconde, quand il atteint l'attack-speed, le vaisseau tire
 		this.bullets = ship.bullets;
@@ -115,10 +113,15 @@ window.onload = function(){
 		this.ctx.beginPath();
 		// Barre verticale
 		this.ctx.moveTo(this.oX, this.oY);
-		// Barre horizontale
-		this.ctx.lineTo(this.oX, this.oY + this.height);
-		this.ctx.moveTo(this.oX - back, this.oY + this.height/2);
 		this.ctx.lineTo(this.oX + front, this.oY + this.height/2);
+		this.ctx.lineTo(this.oX, this.oY + this.height);
+		this.ctx.lineTo(this.oX, this.oY + this.height/2);
+		this.ctx.lineTo(this.oX - back, this.oY + this.height);
+		this.ctx.lineTo(this.oX - front, this.oY + this.height/2);
+		this.ctx.lineTo(this.oX - back, this.oY);
+		this.ctx.lineTo(this.oX, this.oY + this.height/2);
+		this.ctx.lineTo(this.oX, this.oY);
+		
 		this.ctx.stroke();
 	};
 	
@@ -131,11 +134,7 @@ window.onload = function(){
 	// Action de tirer du vaisseau, qui renvoie une nouvelle balle -- peut-être qu'il renverra un array de balles
 	Ship.prototype.shoot = function(nextPlace){
 		var bullet = new Bullet(this.ctx, this.bullets.size, this.bullets.speed, this.oX + this.width/3, this.oY + this.height/2);
-		if(nextPlace === -1){
-			this.fired_bullets.push(bullet);
-		} else {
-			this.fired_bullets[nextPlace] = bullet;
-		}
+		this.fired_bullets.push(bullet);
 	};
 
 	// Constructeur de la classe balle, qui prend les caracs de tir du vaisseau
@@ -151,7 +150,7 @@ window.onload = function(){
 	Bullet.prototype.move = function(){
 		this.ctx.beginPath();
 		this.ctx.moveTo(this.x, this.y);
-		this.ctx.lineTo(this.x+1, this.y);
+		this.ctx.lineTo(this.x+3, this.y);
 		this.ctx.stroke();
 		this.x += this.speed;
 	};
@@ -178,23 +177,31 @@ window.onload = function(){
 		}
 	};
 
+	// Fait apparaître les ennemeis aléatoirement sur la droite du Canvas
 	var popingEnnemies = function(ctx, e){
 		if(time_before_poping === 500 - score){
 			var ennemy = new Ship(ctx, canvas, basic_ennemy_pattern);
 			e.push(ennemy);
-			ennemy.build(canvas.width, Math.floor((Math.random() * canvas.height-5)+1));
+			ennemy.build(canvas.width, Math.floor((Math.random() * canvas.height-3)+1));
 			time_before_poping = 0;
 		} else {
 			time_before_poping++;
 		}
 	};
 	
-	var movingEnnemies = function(e){
+	// Fait bouger les ennemies sur le Canvas. Résoud aussi les actions si un vaisseau atteint le bord gauche du Canvas ou qu'un vaisseau touche un joueur ( gotShot)
+	var movingEnnemies = function(a, e){
 		for(var j = 0 ; j < e.length ; j++){
+			for(var i = 0 ; i < a.length ; i ++){
+				if(e[j].oX === 0 || (((e[j].oY >= a[i].oY && e[j].oY <= a[i].oY + a[i].height) || (a[i].oY >= e[j].oY && a[i].oY <= e[j].oY + e[j].height)) && (e[j].oX <= a[i].oX && e[j].oX + e[j].width/1.5 >= a[i].oX))){
+					gotShot(a, i);
+					gotShot(e, j);
+				}
+			}
 			e[j].move(-(e[j].speed), 0);
-			if(e[j].x <= 1){
-				perdu = true;
-			}	
+			if(e[j].oX <= 0){
+				lost();
+			}
 		}
 	};
 	
@@ -202,23 +209,51 @@ window.onload = function(){
 	var resolvingShots = function(ms, e){
 		for(var i = 0 ; i < ms.fired_bullets.length ; i++){
 			for(var j = 0 ; j < e.length ; j++){
-				if(ms.fired_bullets[i].x >= e[j].oX && ms.fired_bullets[i].y >= e[j].oY && ms.fired_bullets[i].y <= (e[j].oY + e[j].width)){
+				// Si une balle est dans la hitbox ( barre verticale représentant les ailes) d'un des vaisseaux, passe le vaisseau à la méthode gotShot
+				if(ms.fired_bullets[i].x >= e[j].oX && ms.fired_bullets[i].y >= e[j].oY && ms.fired_bullets[i].y <= (e[j].oY + e[j].height)){
 					depop(ms.fired_bullets, i);
-					depop(e, j);
-					showScore(score++);
+					gotShot(e, j);
 				}
 			}
 		}
 	};
 
+	// Fait disparaître un vaisseau ou une balle du canvas
 	var depop = function(array, index){
 		array.splice(index, 1);
 	};
 
+	// méthode permettatn d'incrémenter et d'afficher le score
 	var showScore = function(score){
 		document.getElementById("score").innerHTML = score;
 	};
 
-	init();
+	// Fait perdre des Pv à la cible, si elle est à 0 la fait mourir ( perdre si la cible est le joueur )
+	var gotShot = function(ships, index){
+		ships[index].hp--;
+		console.log(ships[index].ennemy + ", ");
+		if(ships[index].hp === 0){
+			if(ships[index].ennemy){
+				depop(ships, index);
+				showScore(score++);
+			} else {
+				lost();
+			}
+		}
+	};
+
+	// Fonction d'arrêt du jeu si le joueur perd
+	var lost = function(){
+		clearInterval(timerId);
+		start.disabled = false;
+	};
+
+	// permet de lancer le jeu en cliquant sur le bouton start
+	start.onclick = function(){
+		init();
+		start.disabled = true;
+		score = 0;
+		showScore(score++);
+	};
 	
 };
