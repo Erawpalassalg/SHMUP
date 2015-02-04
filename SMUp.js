@@ -14,6 +14,7 @@ window.onload = function(){
 		var ennemies = [];
 		var allies = [];
 		allies.push(mainship);
+		buildShop(mainship);
 		var direction = [0, 0];
 
 		// Nouvelle itération et affichage tous les 10 millièmes de sec
@@ -26,13 +27,14 @@ window.onload = function(){
 			mainship.shooting();
 			moveBullets(mainship);
 			for(var i = 0 ; i <= score ; i++){
-				if(i%10 === 0){
+				if(i%15 === 0){ // Augmente le nombre d'ennemis à poper à chaque décompte
 					popingEnnemies(ctx, ennemies);
 				}
 			}
 			popingEnnemies(ctx, ennemies);
 			movingEnnemies(allies, ennemies);
 			resolvingShots(mainship, ennemies);
+			regenHp(allies, ennemies);
 		}, 10);
 
 		// En fonction de la touche pressée, on met une direction, qui sera suivie par le vaisseau
@@ -48,20 +50,49 @@ window.onload = function(){
 				direction = [mainship.speed, 0]; //mainship.move(10, 0);
 			} else if ( key === "e"){
 				direction = [0, 0];
+			} else if (key === " "){
+				shop();
 			}
 		};
 	};
 	
+	// méthode permettatn d'incrémenter et d'afficher le score
+	var showScore = function(){
+		document.getElementById("score").innerHTML = ""+score;
+		document.getElementById("money").innerHTML = ""+money;
+	};
+
+	// Fonction d'arrêt du jeu si le joueur perd
+	var lost = function(){
+		clearInterval(timerId);
+		start.disabled = false;
+	};
+
+	// permet de lancer le jeu en cliquant sur le bouton start
+	start.onclick = function(){
+		init();
+		start.disabled = true;
+		score = 0;
+		money = 500;
+		showScore();
+	};
+	
+	
+//-------------------------------------------------------------------------------------------------------------------
+	// Partie concernant les vaisseaux	
 	
 	var mainship_pattern = {
 		width : 20,
 		height : 25,
 		speed : 1,
 		attack_speed : 100,
+		damage : 1,
+		max_hp : 1,
 		hp : 1,
+		regen : 0,
 		ennemy : false,
 		bullets : {
-			size : 1,
+			size : 3,
 			speed : 2 // Nombre de cases parcourues par les balles à chaque tour
 		}
 	};
@@ -71,11 +102,14 @@ window.onload = function(){
 		height : 25,
 		speed : 0.5 + score/10,
 		attack_speed : 110,
+		damage : 1,
+		max_hp : 1,
 		hp : 1,
+		regen : 0,
 		ennemy : true,
 		money_worth : 20,
 		bullets : {
-			size : 1,
+			size : 3,
 			speed : 2 // Nombre de cases parcourues par les balles à chaque tour
 		}
 	};
@@ -87,7 +121,10 @@ window.onload = function(){
 		this.height = ship.height;
 		this.speed = ship.speed;
 		this.attack_speed = ship.attack_speed;
+		this.damage = ship.damage;
+		this.max_hp = ship.max_hp;
 		this.hp = ship.hp;
+		this.regen = ship.regen;
 		this.ennemy = ship.ennemy;
 		this.money_worth = ship.money_worth;
 		this.time_before_shooting = 0; // incrémenté toutes les centièmes de seconde, quand il atteint l'attack-speed, le vaisseau tire
@@ -169,7 +206,7 @@ window.onload = function(){
 	Bullet.prototype.move = function(){
 		this.ctx.beginPath();
 		this.ctx.moveTo(this.x, this.y);
-		this.ctx.lineTo(this.x+3, this.y);
+		this.ctx.lineTo(this.x+this.size, this.y);
 		this.ctx.stroke();
 		this.x += this.speed;
 	};
@@ -223,7 +260,7 @@ window.onload = function(){
 				// Si une balle est dans la hitbox ( barre verticale représentant les ailes) d'un des vaisseaux, passe le vaisseau à la méthode gotShot
 				if(ms.fired_bullets[i].x >= e[j].oX && ms.fired_bullets[i].y >= e[j].oY && ms.fired_bullets[i].y <= (e[j].oY + e[j].height)){
 					depop(ms.fired_bullets, i);
-					gotShot(e, j);
+					gotShot(e, j, ms.damage);
 				}
 			}
 		}
@@ -234,17 +271,13 @@ window.onload = function(){
 		array.splice(index, 1);
 	};
 
-	// méthode permettatn d'incrémenter et d'afficher le score
-	var showScore = function(){
-		document.getElementById("score").innerHTML = ""+score;
-		document.getElementById("money").innerHTML = ""+money;
-	};
 
 	// Fait perdre des Pv à la cible, si elle est à 0 la fait mourir ( perdre si la cible est le joueur )
-	var gotShot = function(ships, index){
-		ships[index].hp--;
-		console.log(ships[index].ennemy + ", ");
-		if(ships[index].hp === 0){
+	var gotShot = function(ships, index, damage){
+		ships[index].hp-=damage;
+		console.log(damage);
+		console.log(ships[index].hp);
+		if(ships[index].hp <= 0){
 			if(ships[index].ennemy){
 				money += ships[index].money_worth;
 				depop(ships, index);
@@ -255,20 +288,101 @@ window.onload = function(){
 			}
 		}
 	};
-
-	// Fonction d'arrêt du jeu si le joueur perd
-	var lost = function(){
-		clearInterval(timerId);
-		start.disabled = false;
+	
+	var regenHp = function(a, e){
+		for(var s in a){
+			s.hp += s.regen;
+		};
+		for(var s in e){
+			s.hp += s.regen;
+		};
 	};
-
-	// permet de lancer le jeu en cliquant sur le bouton start
-	start.onclick = function(){
-		init();
-		start.disabled = true;
-		score = 0;
-		money = 500;
-		showScore();
+	
+	
+	
+//-----------------------------------------------------------------------------------------------------------------------------------------	
+	
+	// Partie boutique
+	
+	var buildShop = function(ms){
+		var items_window = document.getElementById("items_window");
+		for(var item in catalog){
+			// Crée un nouvel élément div
+			var div = document.createElement("div");
+			var txt = ""+item;
+			// Append un txt node au div
+			div.appendChild(document.createTextNode(txt));
+			// Rajoute des sauts de ligne et une ligne pour chacune des stats de l'objet JSON
+			for(var stat in catalog[item]){
+				div.innerHTML += "<br>";
+				div.innerHTML += (stat + " : " + catalog[item][stat]);
+			}
+			// Finalement ajoute le div à l'élément items_window
+			items_window.appendChild(div);
+			
+			// Peut-être un ID à la place d'une classe ?
+			div.className += div.className ? (" " + item) : ("" + item);
+			
+			// Le style de chaque élément dy catalogue
+			div.style.display = "inline-block";
+			div.style.backgroundColor = "rgba(120, 120, 120, 0.6)";
+			div.style.margin = "10px";
+			div.style.cursor = "pointer";
+			div.style.padding = "10px";
+			div.style.border = "2px solid coral";
+			div.style.borderRadius = "10px";
+			
+			div.onclick = function(){
+				for(var stat in catalog[item]){ // Problème avec la méthode de onclick -- probablement à transformer en objet/prototype avec un champ div et d'avoir le node dedans, à voir...
+					if(stat != "cost"){
+						console.log(ms[stat]);
+						ms[stat] += catalog[item][stat];
+						console.log(ms[stat]);	
+					}
+				}
+			};
+		}
+	};
+	
+	// La fonction qui fait poper la fenêtre d'achat d'items
+	var shop = function(){
+		var ps = document.getElementById("shop_screen");
+		if(ps.style.display === "none"){
+			ps.style.display = "block";
+		} else {
+			ps.style.display = "none";
+		}
+	};
+	
+	var buy = function(item, ship){
+		for(var k in item){
+			if(k !== "cost"){
+				ship[k] += item[k];
+			}
+		}
+	};
+	
+	// Qui est un objet d'objets, pom pom...
+	var catalog = {
+		engine_boost : {
+			cost : 550,
+			speed : 0.2
+		},
+		
+		canon : {
+			cost : 650,
+			damage : 0.5
+		},
+		
+		power_surge : {
+			cost : 750,
+			atq_speed : 20
+		},
+		
+		shell_piece : {
+			cost : 550,
+			max_hp : 1
+		}
 	};
 	
 };
