@@ -25,6 +25,11 @@ window.onload = function(){
 			
 			mainship.shooting();
 			moveBullets(mainship);
+			for(var i = 0 ; i <= score ; i++){
+				if(i%10 === 0){
+					popingEnnemies(ctx, ennemies);
+				}
+			}
 			popingEnnemies(ctx, ennemies);
 			movingEnnemies(allies, ennemies);
 			resolvingShots(mainship, ennemies);
@@ -41,6 +46,8 @@ window.onload = function(){
 				direction = [-(mainship.speed), 0]; //mainship.move(-10, 0);
 			} else if ( key === "d"){
 				direction = [mainship.speed, 0]; //mainship.move(10, 0);
+			} else if ( key === "e"){
+				direction = [0, 0];
 			}
 		};
 	};
@@ -49,7 +56,7 @@ window.onload = function(){
 	var mainship_pattern = {
 		width : 20,
 		height : 25,
-		speed : 0.5,
+		speed : 1,
 		attack_speed : 100,
 		hp : 1,
 		ennemy : false,
@@ -82,6 +89,7 @@ window.onload = function(){
 		this.attack_speed = ship.attack_speed;
 		this.hp = ship.hp;
 		this.ennemy = ship.ennemy;
+		this.money_worth = ship.money_worth;
 		this.time_before_shooting = 0; // incrémenté toutes les centièmes de seconde, quand il atteint l'attack-speed, le vaisseau tire
 		this.bullets = ship.bullets;
 		this.oX = 0;
@@ -181,10 +189,11 @@ window.onload = function(){
 
 	// Fait apparaître les ennemeis aléatoirement sur la droite du Canvas
 	var popingEnnemies = function(ctx, e){
-		if(time_before_poping === 500 - score){
+		// Incrémentation tous les centièmes de seconde, un ennemy pop lorsqu'arrive à time before_poping - score
+		if(time_before_poping >= 500 - score){
 			var ennemy = new Ship(ctx, canvas, basic_ennemy_pattern);
 			e.push(ennemy);
-			ennemy.build(canvas.width, Math.floor((Math.random() * canvas.height-12)+1));
+			ennemy.build(canvas.width, Math.floor((Math.random() * (canvas.height-12))+1));
 			time_before_poping = 0;
 		} else {
 			time_before_poping++;
@@ -237,9 +246,10 @@ window.onload = function(){
 		console.log(ships[index].ennemy + ", ");
 		if(ships[index].hp === 0){
 			if(ships[index].ennemy){
-				depop(ships, index);
-				showScore(score++);
 				money += ships[index].money_worth;
+				depop(ships, index);
+				score++;
+				showScore();
 			} else {
 				lost();
 			}
@@ -257,6 +267,8 @@ window.onload = function(){
 		init();
 		start.disabled = true;
 		score = 0;
+		money = 500;
+		showScore();
 	};
 	
 };
