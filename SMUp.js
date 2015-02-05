@@ -3,6 +3,7 @@ window.onload = function(){
 	var time_before_poping = 0;
 	var score = 0;
 	var money = 500;
+	var should_I_build_shop = true;
 	var timerId;
 	var start = document.getElementById("start");
 	
@@ -14,7 +15,7 @@ window.onload = function(){
 		var ennemies = [];
 		var allies = [];
 		allies.push(mainship);
-		buildShop(mainship);
+		should_I_build_shop ? buildShop(mainship) : null;
 		var direction = [0, 0];
 
 		// Nouvelle itération et affichage tous les 10 millièmes de sec
@@ -33,7 +34,7 @@ window.onload = function(){
 			}
 			popingEnnemies(ctx, ennemies);
 			movingEnnemies(allies, ennemies);
-			resolvingShots(mainship, ennemies);
+			resolvingShots(mainship, ennemies); 
 			regenHp(allies, ennemies);
 		}, 10);
 
@@ -44,6 +45,7 @@ window.onload = function(){
 				direction = [0, -(mainship.speed)]; //mainship.move(0, -10);
 			} else if( key === "s"){
 				direction = [0, mainship.speed]; //mainship.move(0, 10);
+				console.log(mainship.speed);
 			} else if ( key === "q"){
 				direction = [-(mainship.speed), 0]; //mainship.move(-10, 0);
 			} else if ( key === "d"){
@@ -138,12 +140,12 @@ window.onload = function(){
 	// Dessiner le vaisseau
 	Ship.prototype.build = function(x, y){
 		
-		if((this.oX > 0 && this.oX < this.canvas.width) || (this.oX == 0 && x > 0) || (this.oX == this.canvas.width && x < 0)){ // Si la queue et le cockpit du vaisseau ne touchent ni le bord droit ni le bord gauche, il avance
+		if((this.oX > 0 && this.oX < this.canvas.width) || (this.oX <= 0 && x > 0) || (this.oX == this.canvas.width && x < 0)){ // Si la queue et le cockpit du vaisseau ne touchent ni le bord droit ni le bord gauche, il avance
 			this.oX += x; // Origin X
-		};
-		if((this.oY > 0 && this.oY < this.canvas.height - this.height) || (this.oY == 0 && y > 0) || (this.oY == this.canvas.height - this.height && y < 0)){ // Idem sur l'axe Y
+		}
+		if((this.oY > 0 && this.oY < this.canvas.height - this.height) || (this.oY <= 0 && y > 0) || (this.oY == this.canvas.height - this.height && y < 0)){ // Idem sur l'axe Y
 			this.oY += y; // Origin X
-		};
+		}
 
 		var front;
 		var back;
@@ -275,8 +277,6 @@ window.onload = function(){
 	// Fait perdre des Pv à la cible, si elle est à 0 la fait mourir ( perdre si la cible est le joueur )
 	var gotShot = function(ships, index, damage){
 		ships[index].hp-=damage;
-		console.log(damage);
-		console.log(ships[index].hp);
 		if(ships[index].hp <= 0){
 			if(ships[index].ennemy){
 				money += ships[index].money_worth;
@@ -306,41 +306,10 @@ window.onload = function(){
 	
 	var buildShop = function(ms){
 		var items_window = document.getElementById("items_window");
-		for(var item in catalog){
-			// Crée un nouvel élément div
-			var div = document.createElement("div");
-			var txt = ""+item;
-			// Append un txt node au div
-			div.appendChild(document.createTextNode(txt));
-			// Rajoute des sauts de ligne et une ligne pour chacune des stats de l'objet JSON
-			for(var stat in catalog[item]){
-				div.innerHTML += "<br>";
-				div.innerHTML += (stat + " : " + catalog[item][stat]);
-			}
-			// Finalement ajoute le div à l'élément items_window
-			items_window.appendChild(div);
-			
-			// Peut-être un ID à la place d'une classe ?
-			div.className += div.className ? (" " + item) : ("" + item);
-			
-			// Le style de chaque élément dy catalogue
-			div.style.display = "inline-block";
-			div.style.backgroundColor = "rgba(120, 120, 120, 0.6)";
-			div.style.margin = "10px";
-			div.style.cursor = "pointer";
-			div.style.padding = "10px";
-			div.style.border = "2px solid coral";
-			div.style.borderRadius = "10px";
-			
-			div.onclick = function(){
-				for(var stat in catalog[item]){ // Problème avec la méthode de onclick -- probablement à transformer en objet/prototype avec un champ div et d'avoir le node dedans, à voir...
-					if(stat != "cost"){
-						console.log(ms[stat]);
-						ms[stat] += catalog[item][stat];
-						console.log(ms[stat]);	
-					}
-				}
-			};
+		for(var item_name in catalog){
+			var item_block = new ItemBlock(ms, catalog[item_name]);
+			item_block.putInShop(item_name, catalog[item_name], items_window);
+			should_I_build_shop = false;
 		}
 	};
 	
@@ -354,34 +323,82 @@ window.onload = function(){
 		}
 	};
 	
-	var buy = function(item, ship){
-		for(var k in item){
-			if(k !== "cost"){
-				ship[k] += item[k];
+	// Constructeur d'objets
+	function ItemBlock(ship, item){
+		// Crée un nouvel élément div
+		this.container = document.createElement("div");
+		this.container.onclick = function(){
+			if(money >= item["meta"]["cost"]){
+				for(stat in item["stats"]){
+					ship[stat] += item["stats"][stat];
+				}
+				money -= item["meta"]["cost"];
+				showScore();
+				console.log(ship);
 			}
+		};
+	}
+	
+	ItemBlock.prototype.putInShop = function(name, item, shopNode){
+		// Append un txt node au div
+		this.container.appendChild(document.createTextNode(name));
+		// Rajoute des sauts de ligne et une ligne pour chacune des stats de l'objet JSON
+		for(var stat in item["stats"]){
+			this.container.innerHTML += "<br>";
+			this.container.innerHTML += (stat + " : " + item["stats"][stat] + "<br>" + "Cost : " + item["meta"]["cost"]);
 		}
+		// Finalement ajoute le div à l'élément items_window
+		shopNode.appendChild(this.container);
+		
+		// Peut-être un ID à la place d'une classe ?
+		this.container.className += this.container.className ? (" " + this.name) : this.name;
+		
+		// Le style de chaque élément dy catalogue
+		this.container.style.display = "inline-block";
+		this.container.style.backgroundColor = "rgba(120, 120, 120, 0.6)";
+		this.container.style.margin = "10px";
+		this.container.style.cursor = "pointer";
+		this.container.style.padding = "10px";
+		this.container.style.border = "2px solid coral";
+		this.container.style.borderRadius = "10px";
 	};
 	
 	// Qui est un objet d'objets, pom pom...
 	var catalog = {
-		engine_boost : {
-			cost : 550,
-			speed : 0.2
+		"Engine boost" : {
+			meta : {
+				cost : 550
+			},
+			stats : {
+				speed : 0.2
+			}
 		},
 		
-		canon : {
-			cost : 650,
-			damage : 0.5
+		"Canon" : {
+			meta : {
+				cost : 650
+			},
+			stats : {
+				damage : 0.5
+			}
 		},
 		
-		power_surge : {
-			cost : 750,
-			atq_speed : 20
+		"Power surge" : {
+			meta : {
+				cost : 750
+			},
+			stats : {
+				attack_speed : -20
+			}
 		},
 		
-		shell_piece : {
-			cost : 550,
-			max_hp : 1
+		"Shell Piece" : {
+			meta : {
+				cost : 550
+			},
+			stats : {
+				max_hp : 1
+			}
 		}
 	};
 	
