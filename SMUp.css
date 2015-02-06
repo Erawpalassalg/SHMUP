@@ -1,4 +1,5 @@
 canvas{
+    display: inline-block;
     border: 1px solid black;
     background-color : aqua;
 }
@@ -13,4 +14,10 @@ canvas{
     background-color: rgba(52, 52, 52, 0.6);
     z-index: 50;
     display: none;
+}
+
+#stats{
+    display: inline-block;
+    border: 1px solid black;
+    padding : 5px;
 }

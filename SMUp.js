@@ -2,6 +2,7 @@ window.onload = function(){
 	var canvas = document.getElementById("canvas");
 	var time_before_poping = 0;
 	var score = 0;
+	var ennemies_number = 1;
 	var money = 500;
 	var should_I_build_shop = true;
 	var timerId;
@@ -11,11 +12,12 @@ window.onload = function(){
 		showScore();
 		var ctx = canvas.getContext("2d");
 		var mainship = new Ship(ctx, canvas, mainship_pattern);
-		mainship.build(mainship_pattern.width + 10, canvas.height/2);
+		mainship.build(mainship_pattern.width, canvas.height/2);
 		var ennemies = [];
 		var allies = [];
 		allies.push(mainship);
 		should_I_build_shop ? buildShop(mainship) : null;
+		showStats(mainship);
 		var direction = [0, 0];
 
 		// Nouvelle itération et affichage tous les 10 millièmes de sec
@@ -27,15 +29,13 @@ window.onload = function(){
 			
 			mainship.shooting();
 			moveBullets(mainship);
-			for(var i = 0 ; i <= score ; i++){
-				if(i%15 === 0){ // Augmente le nombre d'ennemis à poper à chaque décompte
-					popingEnnemies(ctx, ennemies);
-				}
+			console.log(ennemies_number);
+			for(var i = 1; i <= ennemies_number ; i++){
+				popingEnnemies(ctx, ennemies);
 			}
-			popingEnnemies(ctx, ennemies);
 			movingEnnemies(allies, ennemies);
 			resolvingShots(mainship, ennemies); 
-			regenHp(allies, ennemies);
+			regenHp(allies, ennemies); // Revoir l'algo de RegenHP, qui ne rgeen rien du tout pour le moment...
 		}, 10);
 
 		// En fonction de la touche pressée, on met une direction, qui sera suivie par le vaisseau
@@ -64,6 +64,15 @@ window.onload = function(){
 		document.getElementById("money").innerHTML = ""+money;
 	};
 
+	// méthode permettant de montrer les stats du vaisseau principal
+	var showStats = function(ms){
+		document.getElementById("hp").innerHTML = "HP : "+ms.hp;
+		document.getElementById("regen").innerHTML = "Regen : "+ms.regen;
+		document.getElementById("attack_speed").innerHTML = " AS : "+ms.attack_speed;
+		document.getElementById("speed").innerHTML = "Mv speed : "+ms.speed;
+		document.getElementById("damage").innerHTML = "Damages : "+ms.damage;
+	};
+
 	// Fonction d'arrêt du jeu si le joueur perd
 	var lost = function(){
 		clearInterval(timerId);
@@ -74,6 +83,7 @@ window.onload = function(){
 	start.onclick = function(){
 		init();
 		start.disabled = true;
+		ennemies_number = 1;
 		score = 0;
 		money = 500;
 		showScore();
@@ -100,7 +110,7 @@ window.onload = function(){
 	};
 	
 	var basic_ennemy_pattern = {
-		width : 20,
+		width : 30,
 		height : 25,
 		speed : 0.5 + score/10,
 		attack_speed : 110,
@@ -189,7 +199,7 @@ window.onload = function(){
 	// Permet au vaisseau de tirer
 	Ship.prototype.shooting = function(){
 		this.time_before_shooting++;
-		if(this.time_before_shooting === this.attack_speed){
+		if(this.time_before_shooting >= this.attack_speed){
 			this.shoot();
 			this.time_before_shooting = 0;
 		}
@@ -244,8 +254,8 @@ window.onload = function(){
 		for(var j = 0 ; j < e.length ; j++){
 			for(var i = 0 ; i < a.length ; i ++){
 				if(e[j].oX === 0 || (((e[j].oY >= a[i].oY && e[j].oY <= a[i].oY + a[i].height) || (a[i].oY >= e[j].oY && a[i].oY <= e[j].oY + e[j].height)) && (e[j].oX <= a[i].oX && e[j].oX + e[j].width/1.5 >= a[i].oX))){
-					gotShot(a, i);
-					gotShot(e, j);
+					gotShot(a, i, e[j].damage);
+					gotShot(e, j, a[i].damage);
 				}
 			}
 			e[j].move(-(e[j].speed), 0);
@@ -282,6 +292,7 @@ window.onload = function(){
 				money += ships[index].money_worth;
 				depop(ships, index);
 				score++;
+				ennemies_number = 1 + score/10;
 				showScore();
 			} else {
 				lost();
@@ -296,6 +307,7 @@ window.onload = function(){
 		for(var s in e){
 			s.hp += s.regen;
 		};
+		document.getElementById("hp").innerHTML = a[0].hp;
 	};
 	
 	
@@ -334,7 +346,7 @@ window.onload = function(){
 				}
 				money -= item["meta"]["cost"];
 				showScore();
-				console.log(ship);
+				showStats(ship);
 			}
 		};
 	}
@@ -345,8 +357,9 @@ window.onload = function(){
 		// Rajoute des sauts de ligne et une ligne pour chacune des stats de l'objet JSON
 		for(var stat in item["stats"]){
 			this.container.innerHTML += "<br>";
-			this.container.innerHTML += (stat + " : " + item["stats"][stat] + "<br>" + "Cost : " + item["meta"]["cost"]);
+			this.container.innerHTML += (stat + " : " + item["stats"][stat]);
 		}
+		this.container.innerHTML += ("<br>" + "Cost : " + item["meta"]["cost"]);
 		// Finalement ajoute le div à l'élément items_window
 		shopNode.appendChild(this.container);
 		
@@ -397,7 +410,8 @@ window.onload = function(){
 				cost : 550
 			},
 			stats : {
-				max_hp : 1
+				max_hp : 1,
+				regen : 0.05
 			}
 		}
 	};
