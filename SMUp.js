@@ -19,6 +19,7 @@ window.onload = function(){
 		should_I_build_shop ? buildShop(mainship) : null;
 		showStats(mainship);
 		var direction = [0, 0];
+		var regen_timer = 0;
 
 		// Nouvelle itération et affichage tous les 10 millièmes de sec
 		timerId = setInterval(function(){
@@ -29,14 +30,18 @@ window.onload = function(){
 			
 			mainship.shooting();
 			moveBullets(mainship);
-			console.log(ennemies_number);
 			for(var i = 1; i <= ennemies_number ; i++){
 				popingEnnemies(ctx, ennemies);
 			}
 			movingEnnemies(allies, ennemies);
 			resolvingShots(mainship, ennemies); 
-			regenHp(allies, ennemies); // Revoir l'algo de RegenHP, qui ne rgeen rien du tout pour le moment...
-		}, 10);
+			regen_timer++;
+			if(regen_timer === 50){
+				regenHp(mainship, ennemies);
+				console.log(regen_timer);
+				regen_timer = 0;
+			}
+		}, 20);
 
 		// En fonction de la touche pressée, on met une direction, qui sera suivie par le vaisseau
 		document.onkeypress = function(event){
@@ -45,7 +50,6 @@ window.onload = function(){
 				direction = [0, -(mainship.speed)]; //mainship.move(0, -10);
 			} else if( key === "s"){
 				direction = [0, mainship.speed]; //mainship.move(0, 10);
-				console.log(mainship.speed);
 			} else if ( key === "q"){
 				direction = [-(mainship.speed), 0]; //mainship.move(-10, 0);
 			} else if ( key === "d"){
@@ -96,24 +100,24 @@ window.onload = function(){
 	var mainship_pattern = {
 		width : 20,
 		height : 25,
-		speed : 1,
-		attack_speed : 100,
+		speed : 2,
+		attack_speed : 50,
 		damage : 1,
 		max_hp : 1,
-		hp : 1,
-		regen : 0,
+		hp : 0.5,
+		regen : 0.05,
 		ennemy : false,
 		bullets : {
 			size : 3,
-			speed : 2 // Nombre de cases parcourues par les balles à chaque tour
+			speed : 4 // Nombre de cases parcourues par les balles à chaque tour
 		}
 	};
 	
 	var basic_ennemy_pattern = {
 		width : 30,
 		height : 25,
-		speed : 0.5 + score/10,
-		attack_speed : 110,
+		speed : 1 + score/5,
+		attack_speed : 55,
 		damage : 1,
 		max_hp : 1,
 		hp : 1,
@@ -122,7 +126,7 @@ window.onload = function(){
 		money_worth : 20,
 		bullets : {
 			size : 3,
-			speed : 2 // Nombre de cases parcourues par les balles à chaque tour
+			speed : 4 // Nombre de cases parcourues par les balles à chaque tour
 		}
 	};
 	
@@ -239,7 +243,7 @@ window.onload = function(){
 	// Fait apparaître les ennemeis aléatoirement sur la droite du Canvas
 	var popingEnnemies = function(ctx, e){
 		// Incrémentation tous les centièmes de seconde, un ennemy pop lorsqu'arrive à time before_poping - score
-		if(time_before_poping >= 500 - score){
+		if(time_before_poping >= 250 - score*2){
 			var ennemy = new Ship(ctx, canvas, basic_ennemy_pattern);
 			e.push(ennemy);
 			ennemy.build(canvas.width, Math.floor((Math.random() * (canvas.height-12))+1));
@@ -300,14 +304,16 @@ window.onload = function(){
 		}
 	};
 	
-	var regenHp = function(a, e){
-		for(var s in a){
-			s.hp += s.regen;
-		};
+	var regenHp = function(ms, e){
+		if (ms.hp < ms.max_hp){
+			ms.hp += ms.regen;
+		}
+			
 		for(var s in e){
-			s.hp += s.regen;
+			if(s.hp < s.max_hp)
+				s.hp += s.regen;
 		};
-		document.getElementById("hp").innerHTML = a[0].hp;
+		document.getElementById("hp").innerHTML = ms.hp;
 	};
 	
 	
@@ -383,7 +389,7 @@ window.onload = function(){
 				cost : 550
 			},
 			stats : {
-				speed : 0.2
+				speed : 0.4
 			}
 		},
 		
@@ -401,7 +407,7 @@ window.onload = function(){
 				cost : 750
 			},
 			stats : {
-				attack_speed : -20
+				attack_speed : -10
 			}
 		},
 		
@@ -411,7 +417,7 @@ window.onload = function(){
 			},
 			stats : {
 				max_hp : 1,
-				regen : 0.05
+				regen : 0.1
 			}
 		}
 	};
