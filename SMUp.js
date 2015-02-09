@@ -23,6 +23,7 @@ window.onload = function(){
 
 		// Nouvelle itération et affichage tous les 10 millièmes de sec
 		timerId = setInterval(function(){
+			var start = new Date().getMilliseconds();
 			// Clear le canvas
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 			// Fait bouger le vaiseau dans la dernière direction pressée
@@ -38,9 +39,9 @@ window.onload = function(){
 			regen_timer++;
 			if(regen_timer === 50){
 				regenHp(mainship, ennemies);
-				console.log(regen_timer);
 				regen_timer = 0;
 			}
+			console.log((new Date().getMilliseconds()) - start);
 		}, 20);
 
 		// En fonction de la touche pressée, on met une direction, qui sera suivie par le vaisseau
@@ -154,10 +155,10 @@ window.onload = function(){
 	// Dessiner le vaisseau
 	Ship.prototype.build = function(x, y){
 		
-		if((this.oX > 0 && this.oX < this.canvas.width) || (this.oX <= 0 && x > 0) || (this.oX == this.canvas.width && x < 0)){ // Si la queue et le cockpit du vaisseau ne touchent ni le bord droit ni le bord gauche, il avance
+		if((this.oX > 0 && this.oX < this.canvas.width) || (this.oX <= 0 && x > 0) || (this.oX === this.canvas.width && x < 0)){ // Si la queue et le cockpit du vaisseau ne touchent ni le bord droit ni le bord gauche, il avance
 			this.oX += x; // Origin X
 		}
-		if((this.oY > 0 && this.oY < this.canvas.height - this.height) || (this.oY <= 0 && y > 0) || (this.oY == this.canvas.height - this.height && y < 0)){ // Idem sur l'axe Y
+		if((this.oY > 0 && y < 0) || (this.oY < this.canvas.height - this.height && y > 0)){ // Idem sur l'axe Y
 			this.oY += y; // Origin X
 		}
 
@@ -307,11 +308,19 @@ window.onload = function(){
 	var regenHp = function(ms, e){
 		if (ms.hp < ms.max_hp){
 			ms.hp += ms.regen;
-		}
+			if(ms.hp > ms.max_hp){
+				ms.hp = ms.max_hp;
+			}
+		} else 
 			
 		for(var s in e){
-			if(s.hp < s.max_hp)
+			if(s.hp < s.max_hp){
 				s.hp += s.regen;
+				if(s.hp > s.max_hp){
+					s.hp = e.max_hp;
+				}
+			}
+				
 		};
 		document.getElementById("hp").innerHTML = ms.hp;
 	};
