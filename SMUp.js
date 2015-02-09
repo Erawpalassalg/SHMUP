@@ -31,6 +31,10 @@ window.onload = function(){
 			
 			mainship.shooting();
 			moveBullets(mainship);
+			for(var e in ennemies){
+				ennemies[e].shooting();
+				moveBullets(ennemies[e]);
+			}
 			for(var i = 1; i <= ennemies_number ; i++){
 				popingEnnemies(ctx, ennemies);
 			}
@@ -118,7 +122,7 @@ window.onload = function(){
 		width : 30,
 		height : 25,
 		speed : 1 + score/5,
-		attack_speed : 55,
+		attack_speed : 200,
 		damage : 1,
 		max_hp : 1,
 		hp : 1,
@@ -126,8 +130,8 @@ window.onload = function(){
 		ennemy : true,
 		money_worth : 20,
 		bullets : {
-			size : 3,
-			speed : 4 // Nombre de cases parcourues par les balles à chaque tour
+			size : -3,
+			speed : -3.5 // Nombre de cases parcourues par les balles à chaque tour
 		}
 	};
 	
@@ -231,7 +235,7 @@ window.onload = function(){
 	var moveBullets = function(ship){
 		for(var j = 0 ; j < ship.fired_bullets.length ; j++){
 			// Si la balle a une valeur x plus grande que la longueur du canvas, on recycle la case
-			if(ship.fired_bullets[j].x > canvas.width){
+			if((ship.ennemy && ship.fired_bullets[j] < 0) || (!(ship.ennemy) && ship.fired_bullets[j].x > canvas.width)){
 				depop(ship.fired_bullets, j);
 			}
 			//console.log("place " + nextPlace);
