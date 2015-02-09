@@ -7,6 +7,7 @@ window.onload = function(){
 	var should_I_build_shop = true;
 	var timerId;
 	var start = document.getElementById("start");
+	var bullets_shot = null;
 	
 	var init = function(){
 		showScore();
@@ -15,6 +16,7 @@ window.onload = function(){
 		mainship.build(mainship_pattern.width, canvas.height/2);
 		var ennemies = [];
 		var allies = [];
+		bullets_shot = [];
 		allies.push(mainship);
 		should_I_build_shop ? buildShop(mainship) : null;
 		showStats(mainship);
@@ -23,29 +25,26 @@ window.onload = function(){
 
 		// Nouvelle itération et affichage tous les 10 millièmes de sec
 		timerId = setInterval(function(){
-			var start = new Date().getMilliseconds();
 			// Clear le canvas
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 			// Fait bouger le vaiseau dans la dernière direction pressée
 			mainship.move(direction[0], direction[1]);
 			
 			mainship.shooting();
-			moveBullets(mainship);
+			moveBullets();
 			for(var e in ennemies){
 				ennemies[e].shooting();
-				moveBullets(ennemies[e]);
 			}
 			for(var i = 1; i <= ennemies_number ; i++){
 				popingEnnemies(ctx, ennemies);
 			}
 			movingEnnemies(allies, ennemies);
-			resolvingShots(mainship, ennemies); 
+			resolvingShots(allies, ennemies); 
 			regen_timer++;
 			if(regen_timer === 50){
 				regenHp(mainship, ennemies);
 				regen_timer = 0;
 			}
-			console.log((new Date().getMilliseconds()) - start);
 		}, 20);
 
 		// En fonction de la touche pressée, on met une direction, qui sera suivie par le vaisseau
@@ -79,7 +78,7 @@ window.onload = function(){
 		document.getElementById("regen").innerHTML = "Regen : "+ms.regen;
 		document.getElementById("attack_speed").innerHTML = " AS : "+ms.attack_speed;
 		document.getElementById("speed").innerHTML = "Mv speed : "+ms.speed;
-		document.getElementById("damage").innerHTML = "Damages : "+ms.damage;
+		document.getElementById("damage").innerHTML = "Damages : "+ms.damages;
 	};
 
 	// Fonction d'arrêt du jeu si le joueur perd
@@ -107,7 +106,7 @@ window.onload = function(){
 		height : 25,
 		speed : 2,
 		attack_speed : 50,
-		damage : 1,
+		damages : 1,
 		max_hp : 1,
 		hp : 0.5,
 		regen : 0.05,
@@ -123,7 +122,7 @@ window.onload = function(){
 		height : 25,
 		speed : 1 + score/5,
 		attack_speed : 200,
-		damage : 1,
+		damages : 1,
 		max_hp : 1,
 		hp : 1,
 		regen : 0,
@@ -142,7 +141,7 @@ window.onload = function(){
 		this.height = ship.height;
 		this.speed = ship.speed;
 		this.attack_speed = ship.attack_speed;
-		this.damage = ship.damage;
+		this.damages = ship.damages;
 		this.max_hp = ship.max_hp;
 		this.hp = ship.hp;
 		this.regen = ship.regen;
@@ -153,7 +152,6 @@ window.onload = function(){
 		this.oX = 0;
 		this.oY = 0;
 		this.ctx = ctx;
-		this.fired_bullets = [];
 	};
 	
 	// Dessiner le vaisseau
@@ -201,24 +199,29 @@ window.onload = function(){
 	
 	// Action de tirer du vaisseau, qui renvoie une nouvelle balle -- peut-être qu'il renverra un array de balles
 	Ship.prototype.shoot = function(){
-		var bullet = new Bullet(this.ctx, this.bullets.size, this.bullets.speed, this.oX + this.width/3, this.oY + this.height/2);
-		this.fired_bullets.push(bullet);
+		var bullet = new Bullet(this.ctx, this.bullets.size, this.bullets.speed, this.oX + this.width/3, this.oY + this.height/2, this.ennemy, this.damages);
+		bullets_shot.push(bullet);
 	};
 	
 	// Permet au vaisseau de tirer
 	Ship.prototype.shooting = function(){
 		this.time_before_shooting++;
 		if(this.time_before_shooting >= this.attack_speed){
+			if(this.ennemy){
+				console.log("ennemy shooting");
+			}
 			this.shoot();
 			this.time_before_shooting = 0;
 		}
 	};
 
 	// Constructeur de la classe balle, qui prend les caracs de tir du vaisseau
-	function Bullet(ctx, size, speed, oX, oY){
+	function Bullet(ctx, size, speed, oX, oY, ennemy, damages){
 		this.ctx = ctx;
 		this.size = size;
 		this.speed = speed;
+		this.ennemy = ennemy;
+		this.damages = damages;
 		this.x = oX;
 		this.y = oY;
 	};
@@ -232,16 +235,16 @@ window.onload = function(){
 		this.x += this.speed;
 	};
 
-	var moveBullets = function(ship){
-		for(var j = 0 ; j < ship.fired_bullets.length ; j++){
+	var moveBullets = function(){
+		for(var j = 0 ; j < bullets_shot.length ; j++){
 			// Si la balle a une valeur x plus grande que la longueur du canvas, on recycle la case
-			if((ship.ennemy && ship.fired_bullets[j] < 0) || (!(ship.ennemy) && ship.fired_bullets[j].x > canvas.width)){
-				depop(ship.fired_bullets, j);
+			if(bullets_shot[j].x < 0 || bullets_shot[j].x > canvas.width){
+				depop(bullets_shot, j);
 			}
 			//console.log("place " + nextPlace);
 			//console.log("longueur " + ship.fired_bullets.length);
 			// Si la balle existe dans le tableau, la bouger
-			ship.fired_bullets[j].move();
+			bullets_shot[j].move();
 		}
 	};
 
@@ -275,13 +278,22 @@ window.onload = function(){
 	};
 	
 	// Résoud les tirs alliés
-	var resolvingShots = function(ms, e){
-		for(var i = 0 ; i < ms.fired_bullets.length ; i++){
-			for(var j = 0 ; j < e.length ; j++){
-				// Si une balle est dans la hitbox ( barre verticale représentant les ailes) d'un des vaisseaux, passe le vaisseau à la méthode gotShot
-				if(ms.fired_bullets[i].x >= e[j].oX && ms.fired_bullets[i].y >= e[j].oY && ms.fired_bullets[i].y <= (e[j].oY + e[j].height)){
-					depop(ms.fired_bullets, i);
-					gotShot(e, j, ms.damage);
+	var resolvingShots = function(a, e){
+		for(var i = 0 ; i < bullets_shot.length ; i++){
+			if(bullets_shot[i].ennemy){
+				if(bullets_shot[i].y > a[0].oY && bullets_shot[i].y < a[0].oY + a[0].height && bullets_shot[i].x <= a[0].oX && bullets_shot[i].x >= a[0].oX-a[0].width/1.5){
+					gotShot(a, 0, bullets_shot[i].damages);
+					console.log("ms : damages : " + bullets_shot[i].damages);
+					depop(bullets_shot, i);
+				}
+			} else {
+				for(var j = 0 ; j < e.length ; j++){
+					// Si une balle est dans la hitbox ( barre verticale représentant les ailes) d'un des vaisseaux, passe le vaisseau à la méthode gotShot
+					if(bullets_shot[i].ennemy != e[j].ennemy && bullets_shot[i].x >= e[j].oX && bullets_shot[i].y >= e[j].oY && bullets_shot[i].y <= (e[j].oY + e[j].height)){
+						gotShot(e, j, bullets_shot[i].damages);
+						console.log("ennemy : damages : " + bullets_shot[i].damages);
+						depop(bullets_shot, i);
+					}
 				}
 			}
 		}
@@ -294,8 +306,8 @@ window.onload = function(){
 
 
 	// Fait perdre des Pv à la cible, si elle est à 0 la fait mourir ( perdre si la cible est le joueur )
-	var gotShot = function(ships, index, damage){
-		ships[index].hp-=damage;
+	var gotShot = function(ships, index, damages){
+		ships[index].hp-=damages;
 		if(ships[index].hp <= 0){
 			if(ships[index].ennemy){
 				money += ships[index].money_worth;
