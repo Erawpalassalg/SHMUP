@@ -205,7 +205,7 @@ window.onload = function(){
 	Ship.prototype.shoot = function(){
 		var p = patternize[this.pattern](this.oX, this.oY, this.width, this.height);
 		for(b in p){
-			var bullet = new Bullet(this.ctx, this.bullets.size, this.bullets.speed, p[b].x, p[b].y, this.ennemy, this.damages);
+			var bullet = new Bullet(this.ctx, this.bullets.size, this.bullets.speed, p[b].x, p[b].y, this.ennemy, this.damages, p[b].direction);
 			bullets_shot.push(bullet);
 		}
 	};
@@ -227,12 +227,13 @@ window.onload = function(){
 
 
 	// Constructeur de la classe balle, qui prend les caracs de tir du vaisseau
-	function Bullet(ctx, size, speed, oX, oY, ennemy, damages){
+	function Bullet(ctx, size, speed, oX, oY, ennemy, damages, direction){
 		this.ctx = ctx;
 		this.size = size;
 		this.speed = speed;
 		this.ennemy = ennemy;
 		this.damages = damages;
+		this.direction = direction;
 		this.x = oX;
 		this.y = oY;
 	};
@@ -241,9 +242,8 @@ window.onload = function(){
 	Bullet.prototype.move = function(){
 		this.ctx.beginPath();
 		this.ctx.moveTo(this.x, this.y);
-		this.ctx.lineTo(this.x+this.size, this.y);
+		this.ctx.lineTo(this.x+=this.size, this.y+=this.direction);
 		this.ctx.stroke();
-		this.x += this.speed;
 	};
 
 	var moveBullets = function(){
@@ -265,7 +265,8 @@ window.onload = function(){
 			return([
 					{
 						x : x + width/3, 
-						y : y + height/2
+						y : y + height/2,
+						direction : 0
 					}
 				]);
 		},
@@ -274,11 +275,13 @@ window.onload = function(){
 			return([
 					{
 						x : x,
-						y : y
+						y : y,
+						direction : 0
 					},
 					{
 						x : x,
-						y : y + height 
+						y : y + height,
+						direction : 0
 					}
 				]);
 		},
@@ -287,15 +290,18 @@ window.onload = function(){
 			return([
 					{
 						x : x,
-						y : y
+						y : y,
+						direction : -1
 					},
 					{
 						x : x,
-						y : y + height 
+						y : y + height,
+						direction : 1
 					},
 					{
 						x : x + width/3, 
-						y : y + height/2
+						y : y + height/2,
+						direction : 0
 					}
 				]);
 		}
