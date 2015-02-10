@@ -19,5 +19,13 @@ canvas{
 #stats{
     display: inline-block;
     border: 1px solid black;
-    padding : 5px;
+    padding: 5px;
+}
+
+button{
+    cursor: pointer;
+}
+
+#alert{
+    height : 15px;
 }

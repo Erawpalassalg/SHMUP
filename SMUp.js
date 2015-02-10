@@ -1,4 +1,5 @@
 window.onload = function(){
+	var onGame = false;
 	var canvas = document.getElementById("canvas");
 	var time_before_poping = 0;
 	var score = null;
@@ -9,8 +10,51 @@ window.onload = function(){
 	var start = document.getElementById("start");
 	var mainship = null;
 	var bullets_shot = null;
+	var items_you_got = null;
+	var message = document.getElementById("alert");
 	
+// -----------------------------------------------------------------------------------------------------------------------------------
+
+	// Partie controles
+	
+	var buttons = {
+		"haut" : {button : null, key : "z"}, // permet de faire un retour de l'objet sur lui-même ne utilisant un autre objet JSON...
+		"bas" : {button : null, key : "s"}, 
+		"droite" : {button : null, key : "d"}, 
+		"gauche" : {button : null, key : "q"}, 
+		"stop" : {button : null, key : "e"}, 
+		"boutique" : {button : null, key : "f"}
+		};
+	
+	function GamingButton(buttons, e){
+		this.direction = e;
+		this.element = document.getElementById(e);
+		this.letter = null;
+		this.element.onclick = function(){
+			if(!onGame){
+				message.innerHTML = "Appuyez sur une touche";
+				document.onkeypress = function(event){
+					var key = String.fromCharCode(event.which);
+					buttons[e]["key"] = key;
+					buttons[e]["button"].element.innerHTML = buttons[e]["button"].letter = buttons[e]["key"] = key;
+					message.innerHTML = null;
+				};
+			}
+		};
+		this.element.innerHTML = this.letter = buttons[e]["key"];
+	};
+	
+	for(var e in buttons){
+		buttons[e]["button"] = new GamingButton(buttons, e);
+	}
+	
+	
+//-----------------------------------------------------------------------------------------------------------------------------------------
+
+	// Initialisation du jeu
+
 	var init = function(){
+		onGame = true;
 		showScore();
 		var ctx = canvas.getContext("2d");
 		mainship = new Ship(ctx, canvas, mainship_pattern);
@@ -23,6 +67,7 @@ window.onload = function(){
 		showStats(mainship);
 		var direction = [0, 0];
 		var regen_timer = 0;
+		items_you_got = [];
 
 		// Nouvelle itération et affichage tous les 10 millièmes de sec
 		timerId = setInterval(function(){
@@ -51,17 +96,17 @@ window.onload = function(){
 		// En fonction de la touche pressée, on met une direction, qui sera suivie par le vaisseau
 		document.onkeypress = function(event){
 			var key = String.fromCharCode(event.which);
-			if(key === "z"){
+			if(key === buttons["haut"]["key"]){
 				direction = [0, -(mainship.speed)]; //mainship.move(0, -10);
-			} else if( key === "s"){
+			} else if( key === buttons["bas"]["key"]){
 				direction = [0, mainship.speed]; //mainship.move(0, 10);
-			} else if ( key === "q"){
+			} else if ( key === buttons["gauche"]["key"]){
 				direction = [-(mainship.speed), 0]; //mainship.move(-10, 0);
-			} else if ( key === "d"){
+			} else if ( key === buttons["droite"]["key"]){
 				direction = [mainship.speed, 0]; //mainship.move(10, 0);
-			} else if ( key === "e"){
+			} else if ( key === buttons["stop"]["key"]){
 				direction = [0, 0];
-			} else if (key === " "){
+			} else if (key === buttons["boutique"]["key"]){
 				shop();
 			}
 		};
@@ -85,6 +130,7 @@ window.onload = function(){
 	// Fonction d'arrêt du jeu si le joueur perd
 	var lost = function(){
 		clearInterval(timerId);
+		onGame = false;
 		start.disabled = false;
 	};
 
@@ -134,7 +180,7 @@ window.onload = function(){
 			size : -3,
 			speed : -3.5 // Nombre de cases parcourues par les balles à chaque tour
 		},
-		pattern : "single"
+		pattern : "simple"
 	};
 	
 	// Le constructeur du vaisseau
@@ -261,7 +307,7 @@ window.onload = function(){
 
 	// Objet fonctenant les fonctions qui sont des patterns.
 	var patternize = {
-		"single" : function(x, y, width, height){
+		"simple" : function(x, y, width, height){
 			return([
 					{
 						x : x + width/3, 
@@ -434,13 +480,18 @@ window.onload = function(){
 		// Crée un nouvel élément div
 		this.container = document.createElement("div");
 		this.container.onclick = function(){
-			if(money >= item["meta"]["cost"]){
+			var i = -1;
+			for(; item["meta"]["pre"] === null || item["meta"]["pre"] === items_you_got[i]["meta"]["name"] && i < items_you_got.length;){ // faire en sorte que le nom soit un champs meta
+				i++;
+			}
+			if(money >= item["meta"]["cost"] && items_you_got.length < 7 && i < items_you_got){
 				for(stat in item["stats"]){
 					//console.log(mainship[stat]);
 					mainship[stat] += item["stats"][stat];
 					//console.log(mainship[stat]);
 				}
 				money -= item["meta"]["cost"];
+				items_you_got.push(item);
 				showScore();
 				showStats(mainship);
 			}
@@ -451,11 +502,14 @@ window.onload = function(){
 		// Append un txt node au div
 		this.container.appendChild(document.createTextNode(name));
 		// Rajoute des sauts de ligne et une ligne pour chacune des stats de l'objet JSON
-		for(var stat in item["stats"]){
-			this.container.innerHTML += "<br>";
-			this.container.innerHTML += (stat + " : " + item["stats"][stat]);
+		for(var stuff in item){
+			for(var stat in item[stuff]){
+				if(item[stuff][stat] != null){
+					this.container.innerHTML += "<br>";
+					this.container.innerHTML += (stat + " : " + item[stuff][stat]);
+				}
+			}
 		}
-		this.container.innerHTML += ("<br>" + "Cost : " + item["meta"]["cost"]);
 		// Finalement ajoute le div à l'élément items_window
 		shopNode.appendChild(this.container);
 		
@@ -476,7 +530,8 @@ window.onload = function(){
 	var catalog = {
 		"Engine boost" : {
 			meta : {
-				cost : 550
+				cost : 550,
+				pre : null
 			},
 			stats : {
 				speed : 0.4
@@ -485,7 +540,8 @@ window.onload = function(){
 		
 		"Upgraded energy cell" : {
 			meta : {
-				cost : 550
+				cost : 550,
+				pre : null
 			},
 			stats : {
 				damage : 0.5
@@ -494,7 +550,8 @@ window.onload = function(){
 		
 		"Power surge" : {
 			meta : {
-				cost : 650
+				cost : 650,
+				pre : null
 			},
 			stats : {
 				attack_speed : 0.5
@@ -503,7 +560,8 @@ window.onload = function(){
 		
 		"Shell Piece" : {
 			meta : {
-				cost : 600
+				cost : 600,
+				pre : null
 			},
 			stats : {
 				max_hp : 1,
