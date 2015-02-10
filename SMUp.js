@@ -7,12 +7,13 @@ window.onload = function(){
 	var should_I_build_shop = true;
 	var timerId;
 	var start = document.getElementById("start");
+	var mainship = null;
 	var bullets_shot = null;
 	
 	var init = function(){
 		showScore();
 		var ctx = canvas.getContext("2d");
-		var mainship = new Ship(ctx, canvas, mainship_pattern);
+		mainship = new Ship(ctx, canvas, mainship_pattern);
 		mainship.build(mainship_pattern.width, canvas.height/2);
 		var ennemies = [];
 		var allies = [];
@@ -105,7 +106,7 @@ window.onload = function(){
 		width : 20,
 		height : 25,
 		speed : 2,
-		attack_speed : 50,
+		attack_speed : 0.75,
 		damages : 1,
 		max_hp : 1,
 		hp : 1,
@@ -114,14 +115,15 @@ window.onload = function(){
 		bullets : {
 			size : 3,
 			speed : 4 // Nombre de cases parcourues par les balles à chaque tour
-		}
+		},
+		pattern : "triple"
 	};
 	
 	var basic_ennemy_pattern = {
 		width : 30,
 		height : 25,
 		speed : 1 + score/5,
-		attack_speed : 200,
+		attack_speed : 0.25,
 		damages : 1,
 		max_hp : 1,
 		hp : 1,
@@ -131,7 +133,8 @@ window.onload = function(){
 		bullets : {
 			size : -3,
 			speed : -3.5 // Nombre de cases parcourues par les balles à chaque tour
-		}
+		},
+		pattern : "single"
 	};
 	
 	// Le constructeur du vaisseau
@@ -151,6 +154,7 @@ window.onload = function(){
 		this.bullets = ship.bullets;
 		this.oX = 0;
 		this.oY = 0;
+		this.pattern = ship.pattern;
 		this.ctx = ctx;
 	};
 	
@@ -199,18 +203,28 @@ window.onload = function(){
 	
 	// Action de tirer du vaisseau, qui renvoie une nouvelle balle -- peut-être qu'il renverra un array de balles
 	Ship.prototype.shoot = function(){
-		var bullet = new Bullet(this.ctx, this.bullets.size, this.bullets.speed, this.oX + this.width/3, this.oY + this.height/2, this.ennemy, this.damages);
-		bullets_shot.push(bullet);
+		var p = patternize[this.pattern](this.oX, this.oY, this.width, this.height);
+		for(b in p){
+			var bullet = new Bullet(this.ctx, this.bullets.size, this.bullets.speed, p[b].x, p[b].y, this.ennemy, this.damages);
+			bullets_shot.push(bullet);
+		}
 	};
 	
 	// Permet au vaisseau de tirer
-	Ship.prototype.shooting = function(){
-		this.time_before_shooting++;
-		if(this.time_before_shooting >= this.attack_speed){
-			this.shoot();
+	Ship.prototype.shooting = function(pattern){
+		this.time_before_shooting += this.attack_speed;
+		if(this.time_before_shooting >= 50){ // 50 est le nombre de frame par seconde, à 1 d'As on tire 1fois/sec
+			this.shoot();				
 			this.time_before_shooting = 0;
 		}
 	};
+
+
+
+//--------------------------------------------------------------------------------------------------------------------------
+
+	// Section des balles
+
 
 	// Constructeur de la classe balle, qui prend les caracs de tir du vaisseau
 	function Bullet(ctx, size, speed, oX, oY, ennemy, damages){
@@ -244,6 +258,53 @@ window.onload = function(){
 			bullets_shot[j].move();
 		}
 	};
+
+	// Objet fonctenant les fonctions qui sont des patterns.
+	var patternize = {
+		"single" : function(x, y, width, height){
+			return([
+					{
+						x : x + width/3, 
+						y : y + height/2
+					}
+				]);
+		},
+		
+		"double" : function(x, y, width, height){
+			return([
+					{
+						x : x,
+						y : y
+					},
+					{
+						x : x,
+						y : y + height 
+					}
+				]);
+		},
+		
+		"triple" : function(x, y, width, height){
+			return([
+					{
+						x : x,
+						y : y
+					},
+					{
+						x : x,
+						y : y + height 
+					},
+					{
+						x : x + width/3, 
+						y : y + height/2
+					}
+				]);
+		}
+	};
+
+
+// -------------------------------------------------------------------------------------------------------------------------------
+
+	// Gameplay
 
 	// Fait apparaître les ennemeis aléatoirement sur la droite du Canvas
 	var popingEnnemies = function(ctx, e){
@@ -317,7 +378,7 @@ window.onload = function(){
 	};
 	
 	var regenHp = function(ms, e){
-		console.log(ms.max_hp);
+		console.log(ms.attack_speed);
 		if (ms.hp < ms.max_hp){
 			ms.hp += ms.regen;
 			if(ms.hp > ms.max_hp){
@@ -346,7 +407,7 @@ window.onload = function(){
 	var buildShop = function(ms){
 		var items_window = document.getElementById("items_window");
 		for(var item_name in catalog){
-			var item_block = new ItemBlock(ms, catalog[item_name]);
+			var item_block = new ItemBlock(catalog[item_name]);
 			item_block.putInShop(item_name, catalog[item_name], items_window);
 			should_I_build_shop = false;
 		}
@@ -363,19 +424,19 @@ window.onload = function(){
 	};
 	
 	// Constructeur d'objets
-	function ItemBlock(ship, item){
+	function ItemBlock(item){
 		// Crée un nouvel élément div
 		this.container = document.createElement("div");
 		this.container.onclick = function(){
 			if(money >= item["meta"]["cost"]){
 				for(stat in item["stats"]){
-					console.log(ship[stat]);
-					ship[stat] += item["stats"][stat];
-					console.log(ship[stat]);
+					//console.log(mainship[stat]);
+					mainship[stat] += item["stats"][stat];
+					//console.log(mainship[stat]);
 				}
 				money -= item["meta"]["cost"];
 				showScore();
-				showStats(ship);
+				showStats(mainship);
 			}
 		};
 	}
@@ -418,7 +479,7 @@ window.onload = function(){
 		
 		"Canon" : {
 			meta : {
-				cost : 650
+				cost : 550
 			},
 			stats : {
 				damage : 0.5
@@ -427,16 +488,16 @@ window.onload = function(){
 		
 		"Power surge" : {
 			meta : {
-				cost : 750
+				cost : 650
 			},
 			stats : {
-				attack_speed : -7
+				attack_speed : 0.5
 			}
 		},
 		
 		"Shell Piece" : {
 			meta : {
-				cost : 550
+				cost : 600
 			},
 			stats : {
 				max_hp : 1,
