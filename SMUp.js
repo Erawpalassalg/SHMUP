@@ -1,9 +1,9 @@
 window.onload = function(){
 	var canvas = document.getElementById("canvas");
 	var time_before_poping = 0;
-	var score = 0;
+	var score = null;
 	var ennemies_number = 1;
-	var money = 500;
+	var money = null;
 	var should_I_build_shop = true;
 	var timerId;
 	var start = document.getElementById("start");
@@ -35,7 +35,7 @@ window.onload = function(){
 			for(var e in ennemies){
 				ennemies[e].shooting();
 			}
-			for(var i = 1; i <= ennemies_number ; i++){
+			for(var i = 0; i <= score/30 ; i++){
 				popingEnnemies(ctx, ennemies);
 			}
 			movingEnnemies(allies, ennemies);
@@ -108,8 +108,8 @@ window.onload = function(){
 		attack_speed : 50,
 		damages : 1,
 		max_hp : 1,
-		hp : 0.5,
-		regen : 0.05,
+		hp : 1,
+		regen : 0,
 		ennemy : false,
 		bullets : {
 			size : 3,
@@ -207,9 +207,6 @@ window.onload = function(){
 	Ship.prototype.shooting = function(){
 		this.time_before_shooting++;
 		if(this.time_before_shooting >= this.attack_speed){
-			if(this.ennemy){
-				console.log("ennemy shooting");
-			}
 			this.shoot();
 			this.time_before_shooting = 0;
 		}
@@ -251,7 +248,7 @@ window.onload = function(){
 	// Fait apparaître les ennemeis aléatoirement sur la droite du Canvas
 	var popingEnnemies = function(ctx, e){
 		// Incrémentation tous les centièmes de seconde, un ennemy pop lorsqu'arrive à time before_poping - score
-		if(time_before_poping >= 250 - score*2){
+		if(time_before_poping >= 250 - (score*5)%150){
 			var ennemy = new Ship(ctx, canvas, basic_ennemy_pattern);
 			e.push(ennemy);
 			ennemy.build(canvas.width, Math.floor((Math.random() * (canvas.height-12))+1));
@@ -283,7 +280,6 @@ window.onload = function(){
 			if(bullets_shot[i].ennemy){
 				if(bullets_shot[i].y > a[0].oY && bullets_shot[i].y < a[0].oY + a[0].height && bullets_shot[i].x <= a[0].oX && bullets_shot[i].x >= a[0].oX-a[0].width/1.5){
 					gotShot(a, 0, bullets_shot[i].damages);
-					console.log("ms : damages : " + bullets_shot[i].damages);
 					depop(bullets_shot, i);
 				}
 			} else {
@@ -291,7 +287,6 @@ window.onload = function(){
 					// Si une balle est dans la hitbox ( barre verticale représentant les ailes) d'un des vaisseaux, passe le vaisseau à la méthode gotShot
 					if(bullets_shot[i].ennemy != e[j].ennemy && bullets_shot[i].x >= e[j].oX && bullets_shot[i].y >= e[j].oY && bullets_shot[i].y <= (e[j].oY + e[j].height)){
 						gotShot(e, j, bullets_shot[i].damages);
-						console.log("ennemy : damages : " + bullets_shot[i].damages);
 						depop(bullets_shot, i);
 					}
 				}
@@ -322,6 +317,7 @@ window.onload = function(){
 	};
 	
 	var regenHp = function(ms, e){
+		console.log(ms.max_hp);
 		if (ms.hp < ms.max_hp){
 			ms.hp += ms.regen;
 			if(ms.hp > ms.max_hp){
@@ -338,7 +334,7 @@ window.onload = function(){
 			}
 				
 		};
-		document.getElementById("hp").innerHTML = ms.hp;
+		document.getElementById("hp").innerHTML = "HP : " + ms.hp;
 	};
 	
 	
@@ -373,7 +369,9 @@ window.onload = function(){
 		this.container.onclick = function(){
 			if(money >= item["meta"]["cost"]){
 				for(stat in item["stats"]){
+					console.log(ship[stat]);
 					ship[stat] += item["stats"][stat];
+					console.log(ship[stat]);
 				}
 				money -= item["meta"]["cost"];
 				showScore();
@@ -432,7 +430,7 @@ window.onload = function(){
 				cost : 750
 			},
 			stats : {
-				attack_speed : -10
+				attack_speed : -7
 			}
 		},
 		
@@ -442,7 +440,7 @@ window.onload = function(){
 			},
 			stats : {
 				max_hp : 1,
-				regen : 0.1
+				regen : 0.05
 			}
 		}
 	};
