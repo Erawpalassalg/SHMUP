@@ -116,7 +116,7 @@ window.onload = function(){
 			size : 3,
 			speed : 4 // Nombre de cases parcourues par les balles à chaque tour
 		},
-		pattern : "triple"
+		pattern : "simple"
 	};
 	
 	var basic_ennemy_pattern = {
@@ -483,7 +483,7 @@ window.onload = function(){
 			}
 		},
 		
-		"Canon" : {
+		"Upgraded energy cell" : {
 			meta : {
 				cost : 550
 			},
