@@ -19,12 +19,12 @@ window.onload = function(){
 	
 	//Objet contenant les informations relatives aux boutons
 	var buttons = {
-		"haut" : {button : null, key : "z"}, // permet de faire un retour de l'objet sur lui-même ne utilisant un autre objet JSON...
-		"bas" : {button : null, key : "s"}, 
-		"droite" : {button : null, key : "d"}, 
-		"gauche" : {button : null, key : "q"}, 
-		"stop" : {button : null, key : "e"}, 
-		"boutique" : {button : null, key : "f"}
+		"haut" : {button : null, key : "Z"}, // permet de faire un retour de l'objet sur lui-même ne utilisant un autre objet JSON...
+		"bas" : {button : null, key : "S"}, 
+		"droite" : {button : null, key : "D"}, 
+		"gauche" : {button : null, key : "Q"}, 
+		"stop" : {button : null, key : "E"}, 
+		"boutique" : {button : null, key : "F"}
 		};
 	
 	// objet bouton qui permet de modifier les controlers
@@ -501,13 +501,13 @@ window.onload = function(){
 	
 	ItemBlock.prototype.putInShop = function(name, item, shopNode){
 		// Append un txt node au div
-		this.container.appendChild(document.createTextNode(name));
+		this.container.appendChild(document.createTextNode(""));
 		// Rajoute des sauts de ligne et une ligne pour chacune des stats de l'objet JSON
 		for(var stuff in item){
 			for(var stat in item[stuff]){
 				if(item[stuff][stat] != null){
-					this.container.innerHTML += "<br>";
 					this.container.innerHTML += (stat + " : " + item[stuff][stat]);
+					this.container.innerHTML += "<br>";
 				}
 			}
 		}
@@ -529,8 +529,9 @@ window.onload = function(){
 	
 	// Qui est un objet d'objets, pom pom...
 	var catalog = {
-		"Engine boost" : {
+		 0 : {
 			meta : {
+				name : "Engine boost",
 				cost : 550,
 				pre : null
 			},
@@ -539,8 +540,9 @@ window.onload = function(){
 			}
 		},
 		
-		"Upgraded energy cell" : {
+		1 : {
 			meta : {
+				name : "Upgraded energy cell",
 				cost : 550,
 				pre : null
 			},
@@ -549,8 +551,9 @@ window.onload = function(){
 			}
 		},
 		
-		"Power surge" : {
+		2 : {
 			meta : {
+				name : "Power surge",
 				cost : 650,
 				pre : null
 			},
@@ -559,8 +562,9 @@ window.onload = function(){
 			}
 		},
 		
-		"Shell Piece" : {
+		3 : {
 			meta : {
+				name : "Shell Piece",
 				cost : 600,
 				pre : null
 			},
