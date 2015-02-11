@@ -17,6 +17,7 @@ window.onload = function(){
 
 	// Partie controles
 	
+	//Objet contenant les informations relatives aux boutons
 	var buttons = {
 		"haut" : {button : null, key : "z"}, // permet de faire un retour de l'objet sur lui-même ne utilisant un autre objet JSON...
 		"bas" : {button : null, key : "s"}, 
@@ -26,6 +27,7 @@ window.onload = function(){
 		"boutique" : {button : null, key : "f"}
 		};
 	
+	// objet bouton qui permet de modifier les controlers
 	function GamingButton(buttons, e){
 		this.direction = e;
 		this.element = document.getElementById(e);
@@ -33,10 +35,8 @@ window.onload = function(){
 		this.element.onclick = function(){
 			if(!onGame){
 				message.innerHTML = "Appuyez sur une touche";
-				document.onkeypress = function(event){
-					var key = String.fromCharCode(event.which);
-					buttons[e]["key"] = key;
-					buttons[e]["button"].element.innerHTML = buttons[e]["button"].letter = buttons[e]["key"] = key;
+				document.onkeydown = function(event){
+					buttons[e]["button"].element.innerHTML = buttons[e]["button"].letter = buttons[e]["key"] = String.fromCharCode(event.which);
 					message.innerHTML = null;
 				};
 			}
@@ -94,7 +94,7 @@ window.onload = function(){
 		}, 20);
 
 		// En fonction de la touche pressée, on met une direction, qui sera suivie par le vaisseau
-		document.onkeypress = function(event){
+		document.onkeydown = function(event){
 			var key = String.fromCharCode(event.which);
 			if(key === buttons["haut"]["key"]){
 				direction = [0, -(mainship.speed)]; //mainship.move(0, -10);
@@ -467,8 +467,9 @@ window.onload = function(){
 	
 	// La fonction qui fait poper la fenêtre d'achat d'items
 	var shop = function(){
+		
 		var ps = document.getElementById("shop_screen");
-		if(ps.style.display === "none"){
+		if(ps.style.display === "none" || ps.style.display === ""){
 			ps.style.display = "block";
 		} else {
 			ps.style.display = "none";
