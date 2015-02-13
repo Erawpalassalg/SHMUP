@@ -118,6 +118,15 @@ window.onload = function(){
 		document.getElementById("money").innerHTML = ""+money;
 	};
 
+	var showItems = function(){
+		var items = document.getElementById("items");
+		items.innerHTML = null;
+		for(item in items_you_got){
+			console.log(items_you_got[item]);
+			items.appendChild(items_you_got[item].cloneNode(true));
+		}
+	};
+
 	// méthode permettant de montrer les stats du vaisseau principal
 	var showStats = function(ms){
 		document.getElementById("hp").innerHTML = "HP : "+ms.hp;
@@ -159,7 +168,7 @@ window.onload = function(){
 		regen : 0,
 		ennemy : false,
 		bullets : {
-			size : 3,
+			size : 4,
 			speed : 4 // Nombre de cases parcourues par les balles à chaque tour
 		},
 		pattern : "simple"
@@ -177,7 +186,7 @@ window.onload = function(){
 		ennemy : true,
 		money_worth : 20,
 		bullets : {
-			size : -3,
+			size : -4,
 			speed : -3.5 // Nombre de cases parcourues par les balles à chaque tour
 		},
 		pattern : "simple"
@@ -218,12 +227,12 @@ window.onload = function(){
 		var back;
 
 		// Construit les ennemies à l'envers
-		if(!this.ennemy){
-			back = this.width/1.5;
-			front = this.width/3;
-		} else {
+		if(this.ennemy){
 			back = this.width/3;
 			front = this.width/1.5;
+		} else {
+			back = this.width/1.5;
+			front = this.width/3;
 		}
 
 		this.ctx.beginPath();
@@ -237,7 +246,6 @@ window.onload = function(){
 		this.ctx.lineTo(this.oX - back, this.oY);
 		this.ctx.lineTo(this.oX, this.oY + this.height/2);
 		this.ctx.lineTo(this.oX, this.oY);
-		
 		this.ctx.stroke();
 	};
 	
@@ -289,7 +297,11 @@ window.onload = function(){
 		this.ctx.beginPath();
 		this.ctx.moveTo(this.x, this.y);
 		this.ctx.lineTo(this.x+=this.size, this.y+=this.direction);
+		if(this.ennemy){
+			this.ctx.strokeStyle = '#ff0000';
+		}
 		this.ctx.stroke();
+		this.ctx.strokeStyle = '#000000';
 	};
 
 	var moveBullets = function(){
@@ -460,6 +472,7 @@ window.onload = function(){
 		var items_window = document.getElementById("items_window");
 		for(var item_name in catalog){
 			var item_block = new ItemBlock(catalog[item_name]);
+			catalog[item_name]["meta"]["object"] = item_block;
 			item_block.putInShop(item_name, catalog[item_name], items_window);
 			should_I_build_shop = false;
 		}
@@ -467,7 +480,6 @@ window.onload = function(){
 	
 	// La fonction qui fait poper la fenêtre d'achat d'items
 	var shop = function(){
-		
 		var ps = document.getElementById("shop_screen");
 		if(ps.style.display === "none" || ps.style.display === ""){
 			ps.style.display = "block";
@@ -476,23 +488,24 @@ window.onload = function(){
 		}
 	};
 	
-	// Constructeur d'objets
+	// Constructeur d'objets dans le magasin
 	function ItemBlock(item){
 		// Crée un nouvel élément div
 		this.container = document.createElement("div");
 		this.container.onclick = function(){
-			var i = -1;
-			for(; item["meta"]["pre"] === null || item["meta"]["pre"] === items_you_got[i]["meta"]["name"] && i < items_you_got.length;){ // faire en sorte que le nom soit un champs meta
-				i++;
-			}
-			if(money >= item["meta"]["cost"] && items_you_got.length < 7 && i < items_you_got){
+			// var i = -1;
+			// while(i < items_you_got.length && (item["infos"]["pre"] === null || item["infos"]["pre"] === items_you_got[i]["infos"]["name"])){ // Créer un autre type d'objets à mettre dans la besace du joueur !
+				// i++;
+			// }
+			if(money >= item["infos"]["cost"] && items_you_got.length < 7){
 				for(stat in item["stats"]){
 					//console.log(mainship[stat]);
 					mainship[stat] += item["stats"][stat];
 					//console.log(mainship[stat]);
 				}
-				money -= item["meta"]["cost"];
-				items_you_got.push(item);
+				money -= item["infos"]["cost"];
+				items_you_got.push(this);
+				showItems(); // Faire la fonction qui montre les items
 				showScore();
 				showStats(mainship);
 			}
@@ -501,13 +514,14 @@ window.onload = function(){
 	
 	ItemBlock.prototype.putInShop = function(name, item, shopNode){
 		// Append un txt node au div
-		this.container.appendChild(document.createTextNode(""));
+		this.container.appendChild(document.createTextNode(name));
 		// Rajoute des sauts de ligne et une ligne pour chacune des stats de l'objet JSON
-		for(var stuff in item){
-			for(var stat in item[stuff]){
-				if(item[stuff][stat] != null){
-					this.container.innerHTML += (stat + " : " + item[stuff][stat]);
+		for(var category in item){
+			for(var stat in item[category]){
+				if(item[stuff][stat] != null && stat != "object"){
+					console.log(item[category]);
 					this.container.innerHTML += "<br>";
+					this.container.innerHTML += (stat + " : " + item[category][stat]);
 				}
 			}
 		}
@@ -529,10 +543,12 @@ window.onload = function(){
 	
 	// Qui est un objet d'objets, pom pom...
 	var catalog = {
-		 0 : {
+		"Engine boost" : {
 			meta : {
-				name : "Engine boost",
-				cost : 550,
+				
+			},
+			infos : {
+				cost : 100,
 				pre : null
 			},
 			stats : {
@@ -540,9 +556,11 @@ window.onload = function(){
 			}
 		},
 		
-		1 : {
+		"Upgraded energy cell" : {
 			meta : {
-				name : "Upgraded energy cell",
+				
+			},
+			infos : {
 				cost : 550,
 				pre : null
 			},
@@ -551,9 +569,11 @@ window.onload = function(){
 			}
 		},
 		
-		2 : {
+		"Power surge" : {
 			meta : {
-				name : "Power surge",
+				
+			},
+			infos : {
 				cost : 650,
 				pre : null
 			},
@@ -562,9 +582,11 @@ window.onload = function(){
 			}
 		},
 		
-		3 : {
+		"Shell Piece" : {
 			meta : {
-				name : "Shell Piece",
+				
+			},
+			infos : {
 				cost : 600,
 				pre : null
 			},
