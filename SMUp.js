@@ -548,7 +548,7 @@ window.onload = function(){
 				
 			},
 			infos : {
-				cost : 100,
+				cost : 550,
 				pre : null
 			},
 			stats : {
