@@ -518,7 +518,7 @@ window.onload = function(){
 		// Rajoute des sauts de ligne et une ligne pour chacune des stats de l'objet JSON
 		for(var category in item){
 			for(var stat in item[category]){
-				if(item[stuff][stat] != null && stat != "object"){
+				if(item[category][stat] != null && stat != "object"){
 					console.log(item[category]);
 					this.container.innerHTML += "<br>";
 					this.container.innerHTML += (stat + " : " + item[category][stat]);
